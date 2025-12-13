@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ProductsExport;
 use App\Http\Requests\ProductRequest;
 use App\Http\Resources\ProductResource;
+use App\Imports\ProductsImport;
 use App\Models\Product;
+use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ProductController extends Controller
 {
@@ -126,4 +130,24 @@ class ProductController extends Controller
 
         return response()->json(['message' => 'force deleted']);
     }
+
+    public function export()
+    {
+        return Excel::download(new ProductsExport, 'products.xlsx');
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,csv']
+        ]);
+
+        Excel::import(new ProductsImport, $request->file('file'));
+
+        return response()->json([
+            'message' => 'Import berhasil'
+        ]);
+    }
+
+
 }
