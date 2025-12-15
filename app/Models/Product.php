@@ -23,4 +23,8 @@ class Product extends Model
     protected $casts = [
         'images' => 'array',
     ];
+
+    public function services(){
+        return $this->belongsToMany(Service::class, 'service_products');
+    }
 }

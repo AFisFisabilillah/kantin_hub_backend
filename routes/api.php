@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthenticateController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ServiceController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -22,4 +23,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/products/{product}', [ProductController::class, 'update']);
     Route::delete('/products/{product}', [ProductController::class, 'destroy']);
 
+    Route::post("/services", [ServiceController::class, 'store']);
+    Route::get("/services/{service}", [ServiceController::class, 'detail']);
+    Route::post("/services/{service}", [ServiceController::class, 'update']);
+    Route::delete("/services/{service}", [ServiceController::class, 'destroy']);
+
+    Route::get('/services/trashed', [ServiceController::class, 'trashed']);
+    Route::post('/services/{id}/restore', [ServiceController::class, 'restore']);
+    Route::delete('/services/{id}/force', [ServiceController::class, 'forceDelete']);
+    Route::post('/services/{service}/cancel', [ServiceController::class, 'cancel']);
+    Route::get('/services/export', [ServiceController::class, 'export']);
 });
