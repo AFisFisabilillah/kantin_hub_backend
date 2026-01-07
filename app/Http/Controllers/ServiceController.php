@@ -13,6 +13,49 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ServiceController extends Controller
 {
+    public function index(Request $request)
+    {
+        $query = Service::query();
+
+        if ($request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('service_code', 'like', "%{$search}%")
+                    ->orWhere('customer_name', 'like', "%{$search}%")
+                    ->orWhere('customer_phone', 'like', "%{$search}%")
+                    ->orWhere('laptop_brand', 'like', "%{$search}%")
+                    ->orWhere('laptop_model', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->status) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->from && $request->to) {
+            $query->whereBetween('created_at', [
+                $request->from,
+                $request->to
+            ]);
+        }
+
+        if ($request->min_cost) {
+            $query->where('total_cost', '>=', $request->min_cost);
+        }
+
+        if ($request->max_cost) {
+            $query->where('total_cost', '<=', $request->max_cost);
+        }
+
+        $query->withCount('products');
+
+        $services = $query
+            ->latest()
+            ->paginate($request->per_page ?? 10);
+
+        return ServiceResource::collection($services);
+    }
+
     public function store(ServiceRequest $request)
     {
         $data = $request->validated();
