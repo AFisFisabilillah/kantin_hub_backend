@@ -28,7 +28,7 @@ class ServiceController extends Controller
 
         $data['service_code'] = 'SRV-' . time();
         $service = Service::create($data);
-
+        $data['service_cost'] = $data['service_cost']??0;
         $totalSparepart = 0;
 
         if ($request->products) {
@@ -120,20 +120,6 @@ class ServiceController extends Controller
         return new ServiceResource($service->load('products'));
     }
 
-    public function cancel(Service $service)
-    {
-        if ($service->status === 'cancelled') {
-            return response()->json(['message' => 'Sudah dibatalkan']);
-        }
-
-        foreach ($service->products as $product) {
-            $product->increment('stok', $product->pivot->qty);
-        }
-
-        $service->update(['status' => 'cancelled']);
-
-        return response()->json(['message' => 'Servis dibatalkan & stok dikembalikan']);
-    }
 
 
     public function trashed()
@@ -167,9 +153,16 @@ class ServiceController extends Controller
 
     public function export()
     {
-        return Excel::download(new ServiceExport, 'services.xlsx');
+        return response()->streamDownload(function () {
+            echo Excel::raw(
+                new ServiceExport,
+                \Maatwebsite\Excel\Excel::XLSX
+            );
+        }, 'services.xlsx',
+            [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ]);
     }
-
 
     public function changeStatus(Request $request, Service $service)
     {

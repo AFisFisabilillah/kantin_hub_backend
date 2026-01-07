@@ -27,7 +27,7 @@ class ServiceRequest extends FormRequest
             'laptop_brand' => ['required'],
             'laptop_model' => ['required'],
             'complaint' => ['required'],
-            'service_cost' => ['required','integer'],
+            'service_cost' => ['nullable','integer'],
             'products' => ['nullable','array'],
             'products.*.product_id' => ['required','exists:products,id'],
             'products.*.qty' => ['required','integer','min:1'],
