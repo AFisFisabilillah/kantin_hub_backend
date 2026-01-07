@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthenticateController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ServiceController;
@@ -33,4 +34,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post("/services/{service}", [ServiceController::class, 'update']);
     Route::delete("/services/{service}", [ServiceController::class, 'destroy']);
 
+    Route::get("/admin", [AdminController::class, 'index']);
+    Route::post("/admin", [AdminController::class, 'store']);
+    Route::get("/admin/{admin}", [AdminController::class, 'show']);
+    Route::post("/admin/{admin}", [AdminController::class, 'update']);
+    Route::delete("/admin/{admin}", [AdminController::class, 'destroy']);
 });
