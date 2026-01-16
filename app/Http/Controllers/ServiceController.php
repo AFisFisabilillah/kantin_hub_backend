@@ -6,9 +6,11 @@ use App\Exports\ServiceExport;
 use App\Http\Requests\ServiceEditRequest;
 use App\Http\Requests\ServiceRequest;
 use App\Http\Resources\ServiceResource;
+use App\Imports\ServicesImport;
 use App\Models\Product;
 use App\Models\Service;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -184,6 +186,34 @@ class ServiceController extends Controller
     }
 
 
+    public function destroyAll(Request $request)
+    {
+        $data = $request->validate([
+            'services' => 'required|array',
+            'services.*' => 'exists:services,id',
+        ]);
+
+        DB::transaction(function () use ($data) {
+            $services = Service::with('products')
+                ->whereIn('id', $data['services'])
+                ->get();
+
+            foreach ($services as $service) {
+                if (in_array($service->status, ['received', 'process'])) {
+                    foreach ($service->products as $product) {
+                        $product->increment('stok', $product->pivot->qty);
+                    }
+                }
+            }
+
+            Service::whereIn('id', $data['services'])->delete();
+        });
+
+        return response()->json([
+            'message' => 'Servis berhasil dihapus',
+        ]);
+    }
+
 
     public function trashed(Request $request)
     {
@@ -271,5 +301,24 @@ class ServiceController extends Controller
         return response()->json([
             'message' => 'Service moved to trash'
         ]);
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv'
+        ]);
+
+        try {
+            Excel::import(new ServicesImport(), $request->file('file'));
+            return response()->json([
+                'message'=> 'Data Service berhasil diimport!'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message'=> 'Data Service gagal diimport! ',
+                "error" => $e->getMessage()
+            ]);
+        }
     }
 }

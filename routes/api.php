@@ -13,6 +13,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post("/profile/update", [AuthenticateController::class, 'update']);
     Route::get("/profile", [AuthenticateController::class, 'profile']);
 
+    Route::post("/products/import", [ProductController::class, 'import']);
+    Route::get("/products/export", [ProductController::class, 'export']);
     Route::get('/products/trashed', [ProductController::class, 'trashed']);
     Route::post('/products/{id}/restore', [ProductController::class, 'restore']);
     Route::delete("/products/deletes",[ProductController::class, 'destroyAll']);
@@ -26,13 +28,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/products/{product}', [ProductController::class, 'update']);
     Route::delete('/products/{product}', [ProductController::class, 'destroy']);
 
+    Route::post('/services/import', [ServiceController::class, 'import']);
     Route::get('/services/export', [ServiceController::class, 'export']);
     Route::get('/services/trashed', [ServiceController::class, 'trashed']);
     Route::get("/services/{service}", [ServiceController::class, 'detail']);
     Route::get('/services', [ServiceController::class, 'index']);
     Route::post('/services/{id}/restore', [ServiceController::class, 'restore']);
+    Route::delete("/services/deletes",[ServiceController::class, 'destroyAll']);
     Route::delete('/services/{id}/force', [ServiceController::class, 'forceDelete']);
-
     Route::patch("/services/change-status/{service}",[ServiceController::class, 'changeStatus']);
     Route::post("/services", [ServiceController::class, 'store']);
     Route::post("/services/{service}", [ServiceController::class, 'update']);

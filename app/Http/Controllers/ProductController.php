@@ -190,14 +190,19 @@ class ProductController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:xlsx,csv']
+            'file' => 'required|mimes:xlsx,xls,csv'
         ]);
 
-        Excel::import(new ProductsImport, $request->file('file'));
-
-        return response()->json([
-            'message' => 'Import berhasil'
-        ]);
+        try {
+            Excel::import(new ProductsImport, $request->file('file'));
+            return response()->json([
+                'message' => 'Import berhasil'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Import gagal'.$e->getMessage()
+            ],400);
+        }
     }
 
 
