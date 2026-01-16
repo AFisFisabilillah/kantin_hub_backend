@@ -7,7 +7,7 @@ use App\Http\Requests\ProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Imports\ProductsImport;
 use App\Models\Product;
-use Illuminate\Support\Facades\Request;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -25,7 +25,6 @@ class ProductController extends Controller
             });
         }
 
-        // Search by SKU
 
 
         // Range harga
@@ -64,6 +63,18 @@ class ProductController extends Controller
         return new ProductResource($product);
     }
 
+    public function destroyAll(Request $request)
+    {
+        $data = $request->validate([
+            "products.*" => "required|exists:products,id",
+        ]);
+
+        Product::whereIn('id', $data['products'])->delete();
+
+        return response()->json([
+            'message' => 'Produk berhasil dihapus',
+        ]);
+    }
     public function update(ProductRequest $request, Product $product)
     {
         $data = $request->validated();
@@ -112,6 +123,46 @@ class ProductController extends Controller
         return response()->json([
             'message' => 'restored',
             'product' => $product
+        ]);
+    }
+
+    public function restoreAll(Request $request){
+        $data = $request->validate([
+            "products.*" => "required|exists:products,id",
+        ]);
+
+        Product::onlyTrashed()->whereIn('id', $data['products'])->restore();
+
+        return response()->json([
+            "message" => "products alredy restored",
+        ]);
+    }
+
+    public function forceAll(Request $request)
+    {
+        $data = $request->validate([
+            'products'   => 'required|array',
+            'products.*' => 'required|exists:products,id',
+        ]);
+
+        $products = Product::onlyTrashed()
+            ->whereIn('id', $data['products'])
+            ->get();
+
+        foreach ($products as $product) {
+            if (!empty($product->images)) {
+                foreach ($product->images as $img) {
+                    Storage::disk('public')->delete($img);
+                }
+            }
+        }
+
+        Product::onlyTrashed()
+            ->whereIn('id', $data['products'])
+            ->forceDelete();
+
+        return response()->json([
+            'message' => 'force deleted',
         ]);
     }
 

@@ -11,6 +11,14 @@ class ServiceResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $images = [];
+        if ($this->images && count($this->images) > 0) {
+            foreach ($this->images as $img) {
+                $images[] = asset("storage/{$img}");
+            }
+        } else {
+            $images[] = asset("no-item.png");
+        }
         return [
             'id' => $this->id,
             'service_code' => $this->service_code,
@@ -22,11 +30,11 @@ class ServiceResource extends JsonResource
             'service_cost' => $this->service_cost,
             'total_cost' => $this->total_cost,
             'status' => $this->status,
-            'images' => $this->images,
+            'images' => $images,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'products_count' => $this->products_count,
-            'products' => ProductResource::collection($this->products),
+            'products' => ProductServiceResource::collection($this->products),
         ];
     }
 }

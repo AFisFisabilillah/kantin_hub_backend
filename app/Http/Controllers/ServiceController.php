@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\ServiceExport;
+use App\Http\Requests\ServiceEditRequest;
 use App\Http\Requests\ServiceRequest;
 use App\Http\Resources\ServiceResource;
 use App\Models\Product;
@@ -112,7 +113,7 @@ class ServiceController extends Controller
         return new ServiceResource($service);
     }
 
-    public function update(ServiceRequest $request, Service $service)
+    public function update(ServiceEditRequest $request, Service $service)
     {
         $data = $request->validated();
 
@@ -155,6 +156,25 @@ class ServiceController extends Controller
             $data['images'] = $paths;
         }
 
+
+        $newStatus = $request->status;
+        $oldStatus = $service->status;
+
+        if ($newStatus === 'cancelled' && $oldStatus !== 'cancelled') {
+
+            foreach ($service->products as $product) {
+                $product->increment('stok', $product->pivot->qty);
+            }
+        }
+
+        // Tidak boleh cancel setelah taken
+        if ($oldStatus === 'taken') {
+            return response()->json([
+                'message' => 'Servis sudah diambil, status tidak bisa diubah'
+            ], 422);
+        }
+
+
         $service->update([
             ...$data,
             'total_cost' => $data['service_cost'] + $totalSparepart
@@ -165,10 +185,10 @@ class ServiceController extends Controller
 
 
 
-    public function trashed()
+    public function trashed(Request $request)
     {
         return ServiceResource::collection(
-            Service::onlyTrashed()->paginate(10)
+            Service::onlyTrashed()->paginate($request->per_page ?? 10)
         );
     }
 
