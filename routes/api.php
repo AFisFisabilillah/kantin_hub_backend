@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthenticateController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ServiceController;
 use Illuminate\Http\Request;
@@ -9,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::post("/login", [AuthenticateController::class, 'login']);
 Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get("/dashboard", [DashboardController::class, 'index']);
     Route::delete("/logout", [AuthenticateController::class, 'logout']);
     Route::post("/profile/update", [AuthenticateController::class, 'update']);
     Route::get("/profile", [AuthenticateController::class, 'profile']);
