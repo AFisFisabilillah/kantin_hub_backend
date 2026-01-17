@@ -14,7 +14,6 @@ class ProductsImport implements ToModel, WithHeadingRow,WithCalculatedFormulas
     public function model(array $row): Product
     {
         return new Product([
-            'sku' => $row['sku'],
             'name' => $row['name'],
             'brand' => $row['brand'],
             'price' => $row['price'],

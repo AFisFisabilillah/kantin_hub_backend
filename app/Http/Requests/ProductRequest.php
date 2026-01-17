@@ -11,7 +11,6 @@ class ProductRequest extends FormRequest
         $id = $this->route('product')?->id;
 
         return [
-            'sku' => ['required', "unique:products,sku,$id"],
             'name' => ['required'],
             'brand' => ['required'],
             'price' => ['required', 'integer'],

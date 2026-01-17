@@ -52,8 +52,6 @@ class ProductController extends Controller
             }
             $data['images'] = $paths;
         }
-
-
         $product = Product::create($data);
         return new ProductResource($product);
     }

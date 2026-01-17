@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Product extends Model
 {
@@ -26,5 +27,13 @@ class Product extends Model
 
     public function services(){
         return $this->belongsToMany(Service::class, 'service_products');
+    }
+
+    protected static function booted(){
+        static::creating(function (Product $product) {
+            if (empty($product->sku)) {
+                $product->sku = "SKU-".now()->format('YmdHis')."-".Str::upper(Str::random(4));
+            }
+        });
     }
 }
