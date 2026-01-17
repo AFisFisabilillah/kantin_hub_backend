@@ -12,7 +12,9 @@ use App\Models\Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
+use function Laravel\Prompts\error;
 
 class ServiceController extends Controller
 {
@@ -72,7 +74,7 @@ class ServiceController extends Controller
             $data['images'] = $paths;
         }
 
-        $data['service_code'] = 'SRV-' . time();
+        $data['service_code'] ='SRV-' . now()->format('YmdHis') . '-' . Str::upper(Str::random(4));
         $service = Service::create($data);
         $data['service_cost'] = $data['service_cost']??0;
         $totalSparepart = 0;
@@ -318,7 +320,7 @@ class ServiceController extends Controller
             return response()->json([
                 'message'=> 'Data Service gagal diimport! ',
                 "error" => $e->getMessage()
-            ]);
+            ], 400);
         }
     }
 }
