@@ -21,7 +21,7 @@ return new class extends Migration
             $table->text('complaint');
             $table->unsignedBigInteger('service_cost')->default(0); // jasa
             $table->unsignedBigInteger('total_cost')->default(0);   // jasa + sparepart
-            $table->enum('status', ['received','process','done','taken'])->default('received');
+            $table->enum('status', ['received','process','done','cancelled','taken'])->default('received');
             $table->json('images')->nullable(); // ARRAY gambar laptop
             $table->timestamps();
             $table->softDeletes();

@@ -4,11 +4,14 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthenticateController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SaleController;
 use App\Http\Controllers\ServiceController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::post("/login", [AuthenticateController::class, 'login']);
+Route::get("/services/user/{service:service_code}", [ServiceController::class, 'detail']);
+
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get("/dashboard", [DashboardController::class, 'index']);
     Route::delete("/logout", [AuthenticateController::class, 'logout']);
@@ -48,4 +51,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get("/admin/{admin}", [AdminController::class, 'show']);
     Route::post("/admin/{admin}", [AdminController::class, 'update']);
     Route::delete("/admin/{admin}", [AdminController::class, 'destroy']);
+
+    Route::get("/sales/trash",[SaleController::class, 'trashed']);
+    Route::post("/sales/restore/{id}",[SaleController::class, 'restore']);
+    Route::delete("/sales/force/{id}",[SaleController::class, 'force']);
+    Route::post('/sales/import', [SaleController::class, 'import']);
+    Route::get('/sales/export', [SaleController::class, 'export']);
+    Route::delete('/sales/deletes', [SaleController::class, 'destroyAll']);
+
+    Route::post('/sales', [SaleController::class, 'store']);
+    Route::get('/sales', [SaleController::class, 'index']);
+    Route::get('/sales/{sale}', [SaleController::class, 'show']);
+    Route::delete("/sales/{sale}", [SaleController::class, 'destroy']);
+    Route::patch("/sales/{sale}", [SaleController::class, 'update']);
+
 });
