@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthenticateController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\LandingPageController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\ServiceController;
@@ -52,4 +53,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete("/sales/{sale}", [SaleController::class, 'destroy']);
     Route::patch("/sales/{sale}", [SaleController::class, 'update']);
 
+    Route::get("/landing-page", [LandingPageController::class, 'index']);
+    Route::post('/landing-page',[LandingPageController::class, 'update']);
 });

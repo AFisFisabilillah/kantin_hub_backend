@@ -10,7 +10,10 @@ class LandingPageRequest extends FormRequest
     {
         return [
             "hero_title" => "required|string|max:100",
-            "hero_"
+            "hero_description" => "required|string",
+            "hero_image" => "nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048",
+            "about_me" => "required|string",
+            "about_image" => "nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048",
         ];
     }
 

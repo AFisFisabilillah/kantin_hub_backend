@@ -10,6 +10,7 @@ class LandingPage extends Model
         'hero_tittle',
         'hero_image',
         'about_me',
+        'hero_description',
         'about_image',
     ];
 }
