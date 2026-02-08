@@ -12,165 +12,171 @@ use Illuminate\Support\Carbon;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request)
+    public function statistics(Request $request)
     {
-        // 1. Setup Filter Tanggal
+        $period = $request->get('period', 'today'); // today, week, month, year
+
+        $today = Carbon::today();
         $startDate = null;
-        $endDate = Carbon::now()->endOfDay();
+        $endDate = $today;
 
-        if ($request->range == 'today') {
-            $startDate = Carbon::today();
-        } elseif ($request->range == 'this_month') {
-            $startDate = Carbon::now()->startOfMonth();
-        } elseif ($request->range == 'this_year') {
-            $startDate = Carbon::now()->startOfYear();
-        } elseif ($request->start_date && $request->end_date) {
-            $startDate = Carbon::parse($request->start_date)->startOfDay();
-            $endDate = Carbon::parse($request->end_date)->endOfDay();
+        switch ($period) {
+            case 'today':
+                $startDate = $today;
+                break;
+            case 'week':
+                $startDate = $today->copy()->startOfWeek();
+                break;
+            case 'month':
+                $startDate = $today->copy()->startOfMonth();
+                break;
+            case 'year':
+                $startDate = $today->copy()->startOfYear();
+                break;
         }
 
-        // 2. Query Base dengan Filter
-        $serviceQuery = Service::query();
-        $saleQuery = Sale::query();
+        // Total Sales
+        $totalSalesQuery = Sale::query();
         if ($startDate) {
-            $serviceQuery->whereBetween('created_at', [$startDate, $endDate]);
-            $saleQuery->whereBetween('created_at', [$startDate, $endDate]);
+            $totalSalesQuery->whereDate('created_at', '>=', $startDate)
+                ->whereDate('created_at', '<=', $endDate);
         }
+        $totalSales = $totalSalesQuery->count();
+        $revenue = $totalSalesQuery->sum('total_price');
 
-        // --- OVERVIEW ---
+        // Revenue Growth
+        $previousPeriodRevenue = $this->getPreviousPeriodRevenue($period);
+        $revenueGrowth = $previousPeriodRevenue > 0
+            ? (($revenue - $previousPeriodRevenue) / $previousPeriodRevenue) * 100
+            : 0;
+
+        // Total Products
         $totalProducts = Product::count();
-        $totalServices = (clone $serviceQuery)->count();
-        $totalSales = (clone $saleQuery)->count();
-        $totalAdmins = Admin::count();
 
-        $revService = (clone $serviceQuery)->sum('total_cost');
-        $revSale = (clone $saleQuery)->sum('total_price');
+        // Low Stock Products
+        $lowStockProducts = Product::where('stok', '<', 10)->count();
 
-        $todayRevenue = Service::whereDate('created_at', Carbon::today())->sum('total_cost') +
-            Sale::whereDate('created_at', Carbon::today())->sum('total_price');
+        // Recent Sales
+        $recentSales = Sale::with(['items.product'])
+            ->latest()
+            ->take(5)
+            ->get();
 
-        $monthlyRevenue = Service::whereMonth('created_at', Carbon::now()->month)->sum('total_cost') +
-            Sale::whereMonth('created_at', Carbon::now()->month)->sum('total_price');
-
-        // --- RECENT ACTIVITIES (Merged from multiple tables) ---
-        $recentSales = Sale::latest()->limit(2)->get()->map(fn($item) => [
-            'id' => $item->id, 'type' => 'sale', 'title' => 'New Sale', 'description' => "Invoice $item->invoice_number",
-            'customer' => $item->customer_name, 'amount' => $item->total_price, 'status' => 'completed', 'time' => $item->created_at->diffForHumans()
-        ]);
-
-        $recentServices = Service::latest()->limit(2)->get()->map(fn($item) => [
-            'id' => $item->id, 'type' => 'service', 'title' => 'New Service Request', 'description' => "Repair $item->laptop_brand",
-            'status' => $item->status, 'time' => $item->created_at->diffForHumans()
-        ]);
-
-        $recentAdmins = Admin::latest()->limit(1)->get()->map(fn($item) => [
-            'id' => $item->id, 'type' => 'admin', 'title' => 'Admin Created', 'username' => $item->username, 'status' => 'success', 'time' => $item->created_at->diffForHumans()
-        ]);
-
-        $activities = $recentSales->concat($recentServices)->concat($recentAdmins)->sortByDesc('time')->values()->take(5);
-
-        // --- SERVICE STATS ---
-        $serviceStatsByStatus = (clone $serviceQuery)->select('status', DB::raw('count(*) as total'))->groupBy('status')->pluck('total', 'status');
-        $monthlyTrend = collect(range(1, 12))->map(fn($m) => Service::whereYear('created_at', date('Y'))->whereMonth('created_at', $m)->count());
-
-        // --- PRODUCT STATS ---
-        // Menghitung top selling gabungan dari Service dan Sale
-        $topSelling = DB::table(function($query) {
-            $query->select('product_id', 'qty')->from('service_products')
-                ->unionAll(DB::table('sale_items')->select('product_id', 'qty'));
-        }, 'combined_sales')
-            ->join('products', 'combined_sales.product_id', '=', 'products.id')
-            ->select('products.name', DB::raw('sum(combined_sales.qty) as sold'))
-            ->groupBy('products.id', 'products.name')
-            ->orderByDesc('sold')->limit(5)->get();
-
-        // --- SALES STATS ---
-        $salesByPayment = (clone $saleQuery)->select('payment_method', DB::raw('count(*) as total'))->groupBy('payment_method')->pluck('total', 'payment_method');
-
-        // --- REVENUE DATA (Charts) ---
-        $monthlyData = [];
-        for ($i = 5; $i >= 0; $i--) {
-            $month = Carbon::now()->subMonths($i);
-            $monthlyData[] = [
-                'month' => $month->format('M'),
-                'revenue' => (int)(Service::whereMonth('created_at', $month->month)->sum('total_cost') + Sale::whereMonth('created_at', $month->month)->sum('total_price')),
-                'sales' => Sale::whereMonth('created_at', $month->month)->count(),
-                'services' => Service::whereMonth('created_at', $month->month)->count(),
-            ];
-        }
-
-        $dailyRevenue = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $day = Carbon::now()->subDays($i);
-            $dailyRevenue[] = [
-                'day' => $day->format('D'),
-                'revenue' => (int)(Service::whereDate('created_at', $day)->sum('total_cost') + Sale::whereDate('created_at', $day)->sum('total_price'))
-            ];
-        }
+        // Sales Chart Data
+        $chartData = $this->getSalesChartData($period);
 
         return response()->json([
-            'dashboard' => [
-                'overview' => [
-                    'totalProducts' => $totalProducts,
-                    'totalServices' => $totalServices,
-                    'totalAdmins' => $totalAdmins,
-                    'totalSales' => $totalSales,
-                    'totalRevenue' => $revService + $revSale,
-                    'todayRevenue' => (int)$todayRevenue,
-                    'monthlyRevenue' => (int)$monthlyRevenue,
-                ],
-                'recentActivities' => $activities,
-                'serviceStats' => [
-                    'total' => $totalServices,
-                    'byStatus' => [
-                        'received' => $serviceStatsByStatus['received'] ?? 0,
-                        'process' => $serviceStatsByStatus['process'] ?? 0,
-                        'done' => $serviceStatsByStatus['done'] ?? 0,
-                        'taken' => $serviceStatsByStatus['taken'] ?? 0,
-                        'cancelled' => $serviceStatsByStatus['cancelled'] ?? 0,
-                    ],
-                    'monthlyTrend' => $monthlyTrend
-                ],
-                'productStats' => [
-                    'total' => $totalProducts,
-                    'lowStock' => Product::where('stok', '>', 0)->where('stok', '<=', 10)->count(),
-                    'outOfStock' => Product::where('stok', '<=', 0)->count(),
-                    'topSelling' => $topSelling
-                ],
-                'salesStats' => [
-                    'total' => $totalSales,
-                    'today' => Sale::whereDate('created_at', Carbon::today())->count(),
-                    'monthly' => Sale::whereMonth('created_at', Carbon::now()->month)->count(),
-                    'averageValue' => $totalSales > 0 ? round($revSale / $totalSales) : 0,
-                    'byPaymentMethod' => $salesByPayment,
-                    'recentSales' => Sale::latest()->limit(5)->get()->map(fn($s) => [
-                        'invoice' => $s->invoice_number,
-                        'customer' => $s->customer_name,
-                        'amount' => $s->total_price,
-                        'payment' => $s->payment_method,
-                        'time' => $s->created_at->diffForHumans()
-                    ])
-                ],
-                'revenueData' => [
-                    'monthly' => $monthlyData,
-                    'categories' => [
-                        ['category' => 'Sales', 'value' => ($revService + $revSale) > 0 ? round(($revSale / ($revService + $revSale)) * 100) : 0],
-                        ['category' => 'Services', 'value' => ($revService + $revSale) > 0 ? round(($revService / ($revService + $revSale)) * 100) : 0],
-                    ],
-                    'daily' => $dailyRevenue
-                ]
+            'success' => true,
+            'data' => [
+                'total_sales' => $totalSales,
+                'revenue' => $revenue,
+                'revenue_growth' => round($revenueGrowth, 2),
+                'total_products' => $totalProducts,
+                'low_stock_products' => $lowStockProducts,
+                'recent_sales' => $recentSales,
+                'chart_data' => $chartData,
             ]
         ]);
     }
-    private function formatTitle($status)
+
+    private function getPreviousPeriodRevenue($period)
     {
-        return match ($status) {
-            'received' => 'New Service Request',
-            'done' => 'Service Completed',
-            'process' => 'Service in Progress',
-            'taken' => 'Device Collected',
-            'cancelled' => 'Service Cancelled',
-            default => 'Service Update'
-        };
+        $today = Carbon::today();
+
+        switch ($period) {
+            case 'today':
+                return Sale::whereDate('created_at', $today->copy()->subDay())->sum('total_price');
+            case 'week':
+                return Sale::whereBetween('created_at', [
+                    $today->copy()->subWeek()->startOfWeek(),
+                    $today->copy()->subWeek()->endOfWeek()
+                ])->sum('total_price');
+            case 'month':
+                return Sale::whereMonth('created_at', $today->copy()->subMonth()->month)
+                    ->whereYear('created_at', $today->copy()->subMonth()->year)
+                    ->sum('total_price');
+            case 'year':
+                return Sale::whereYear('created_at', $today->copy()->subYear()->year)
+                    ->sum('total_price');
+            default:
+                return 0;
+        }
+    }
+
+    private function getSalesChartData($period)
+    {
+        $data = [];
+        $today = Carbon::today();
+
+        if ($period === 'today') {
+            // Hourly data for today
+            for ($i = 0; $i < 24; $i++) {
+                $hour = $today->copy()->hour($i);
+                $nextHour = $hour->copy()->addHour();
+
+                $sales = Sale::whereBetween('created_at', [$hour, $nextHour])
+                    ->sum('total_price');
+
+                $data[] = [
+                    'name' => $hour->format('H:00'),
+                    'sales' => $sales ?? 0,
+                ];
+            }
+        } elseif ($period === 'week') {
+            // Daily data for week
+            for ($i = 6; $i >= 0; $i--) {
+                $date = $today->copy()->subDays($i);
+                $sales = Sale::whereDate('created_at', $date)
+                    ->sum('total_price');
+
+                $data[] = [
+                    'name' => $date->format('D'),
+                    'sales' => $sales ?? 0,
+                    'full_date' => $date->format('Y-m-d'),
+                ];
+            }
+        } elseif ($period === 'month') {
+            // Weekly data for month
+            $startOfMonth = $today->copy()->startOfMonth();
+            $endOfMonth = $today->copy()->endOfMonth();
+
+            $current = $startOfMonth->copy();
+            $week = 1;
+
+            while ($current->lt($endOfMonth)) {
+                $weekEnd = $current->copy()->endOfWeek();
+                if ($weekEnd->gt($endOfMonth)) {
+                    $weekEnd = $endOfMonth;
+                }
+
+                $sales = Sale::whereBetween('created_at', [$current, $weekEnd])
+                    ->sum('total_price');
+
+                $data[] = [
+                    'name' => 'Week ' . $week,
+                    'sales' => $sales ?? 0,
+                    'period' => $current->format('M d') . ' - ' . $weekEnd->format('M d'),
+                ];
+
+                $current = $weekEnd->copy()->addDay();
+                $week++;
+            }
+        } else {
+            // Monthly data for year
+            for ($i = 1; $i <= 12; $i++) {
+                $month = Carbon::create($today->year, $i, 1);
+                $sales = Sale::whereYear('created_at', $today->year)
+                    ->whereMonth('created_at', $i)
+                    ->sum('total_price');
+
+                $data[] = [
+                    'name' => $month->format('M'),
+                    'sales' => $sales ?? 0,
+                    'month' => $month->format('F Y'),
+                ];
+            }
+        }
+
+        return $data;
     }
 }

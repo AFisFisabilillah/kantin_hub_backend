@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::post("/login", [AuthenticateController::class, 'login']);
 
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::get("/dashboard", [DashboardController::class, 'index']);
+Route::middleware(['auth:sanctum', 'auth:admint'])->group(function () {
+    Route::get('/dashboard/statistics', [DashboardController::class, 'statistics']);
     Route::delete("/logout", [AuthenticateController::class, 'logout']);
     Route::post("/profile/update", [AuthenticateController::class, 'update']);
     Route::get("/profile", [AuthenticateController::class, 'profile']);
@@ -56,3 +56,4 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get("/landing-page", [LandingPageController::class, 'index']);
     Route::post('/landing-page',[LandingPageController::class, 'update']);
 });
+
