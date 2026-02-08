@@ -10,7 +10,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::post("/login", [AuthenticateController::class, 'login']);
-Route::get("/services/user/{service:service_code}", [ServiceController::class, 'detail']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get("/dashboard", [DashboardController::class, 'index']);
@@ -33,18 +32,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/products/{product}', [ProductController::class, 'update']);
     Route::delete('/products/{product}', [ProductController::class, 'destroy']);
 
-    Route::post('/services/import', [ServiceController::class, 'import']);
-    Route::get('/services/export', [ServiceController::class, 'export']);
-    Route::get('/services/trashed', [ServiceController::class, 'trashed']);
-    Route::get("/services/{service}", [ServiceController::class, 'detail']);
-    Route::get('/services', [ServiceController::class, 'index']);
-    Route::post('/services/{id}/restore', [ServiceController::class, 'restore']);
-    Route::delete("/services/deletes",[ServiceController::class, 'destroyAll']);
-    Route::delete('/services/{id}/force', [ServiceController::class, 'forceDelete']);
-    Route::patch("/services/change-status/{service}",[ServiceController::class, 'changeStatus']);
-    Route::post("/services", [ServiceController::class, 'store']);
-    Route::post("/services/{service}", [ServiceController::class, 'update']);
-    Route::delete("/services/{service}", [ServiceController::class, 'destroy']);
 
     Route::get("/admin", [AdminController::class, 'index']);
     Route::post("/admin", [AdminController::class, 'store']);
